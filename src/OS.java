@@ -57,10 +57,8 @@ public class OS {
 
     public static void StartupPCB(UserlandProcess up, OS.priority priority, int time) {
         CreateProcessPCB(up, priority, time);
-        waitForKernel();
 
         CreateProcessPCB(new IdleProcess(), OS.priority.background, time);
-        waitForKernel();
     }
 
     public static void Sleep(int ms) {
