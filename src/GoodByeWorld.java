@@ -1,4 +1,4 @@
-public class GoobByeWorld extends UserlandProcess{
+public class GoodByeWorld extends UserlandProcess{
     @Override
     public void main() {
         while(true){

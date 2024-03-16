@@ -1,18 +1,21 @@
 import java.time.Clock;
 import java.time.Instant;
+import java.util.LinkedList;
 
 public class PCB {
-    UserlandProcess userlandProcess;
+    private UserlandProcess userlandProcess;
     private static int nextPID;
     private int PID;
     private Instant wakeUp;
     private OS.priority priority;
     private int demotion;
+    private LinkedList<KernelMessage> messages;
 
     public PCB(UserlandProcess up,OS.priority priority, int waitTime){
         this.userlandProcess = up;
         this.priority= priority;
         this.wakeUp = Clock.systemDefaultZone().instant().plusMillis(waitTime);
+        this.messages = new LinkedList<>();
         PID = up.hashCode();
     }
 
@@ -52,6 +55,15 @@ public class PCB {
         }
     }
 
+    public void AddMessage(KernelMessage message){
+        System.out.println(this.userlandProcess.getClass().getSimpleName()+": Got the message: "+message);
+        messages.add(message);
+    }
+
+    public void clearMessage(){
+        messages.clear();
+    }
+
     public UserlandProcess getUserlandProcess() {
         return userlandProcess;
     }
@@ -66,5 +78,9 @@ public class PCB {
 
     public OS.priority getPriority() {
         return priority;
+    }
+
+    public LinkedList<KernelMessage> getMessages() {
+        return messages;
     }
 }

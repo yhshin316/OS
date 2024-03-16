@@ -1,3 +1,4 @@
+import java.util.LinkedList;
 import java.util.concurrent.Semaphore;
 
 public class Kernel implements Runnable{
@@ -35,6 +36,18 @@ public class Kernel implements Runnable{
                 case sleep:
                     scheduler.Sleep((int)OS.parameters.getFirst());
                     break;
+                case getSenderPID:
+                    OS.returnValue = scheduler.GetPid();
+                    break;
+                case getReceieverPID:
+                    OS.returnValue = scheduler.GetPidByName((String) OS.parameters.getFirst());
+                    break;
+                case sendMessage:
+                    scheduler.SendMessage((KernelMessage) OS.parameters.getFirst());
+                    break;
+                case getMessage:
+                    OS.returnValue = scheduler.GetMessage();
+                    break;
             }
 
             synchronized (this) {
@@ -43,4 +56,19 @@ public class Kernel implements Runnable{
         }
     }
 
+//    public void GetPid() {
+//        OS.returnValue = scheduler.GetPid();
+//    }
+//
+//    public void GetPidByName(){
+//        OS.returnValue = scheduler.GetPidByName((String) OS.parameters.getFirst());
+//    }
+//
+//    public void SendMessage(){
+//        scheduler.SendMessage((KernelMessage) OS.parameters.getFirst());
+//    }
+//
+//    public void GetMessage(){
+//        OS.returnValue = scheduler.GetMessage();
+//    }
 }

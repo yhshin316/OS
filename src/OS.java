@@ -11,7 +11,11 @@ public class OS {
     public enum currentCall {
         createProcess,
         switchProcess,
-        sleep
+        sleep,
+        getSenderPID,
+        getReceieverPID,
+        sendMessage,
+        getMessage
     }
 
     public enum priority {
@@ -20,16 +24,16 @@ public class OS {
         background
     }
 
-    public static int CreateProcess(UserlandProcess up) {
+    public static void CreateProcess(UserlandProcess up) {
         parameters.clear();
         parameters.add(up);
         callType = currentCall.createProcess;
         kernel.start();
         waitForKernel();
-        return (int) returnValue;
+        System.out.println("Created"+returnValue.toString());
     }
 
-    public static int CreateProcessPCB(UserlandProcess up, OS.priority priority, int time) {
+    public static void CreateProcessPCB(UserlandProcess up, OS.priority priority, int time) {
         parameters.clear();
         parameters.add(up);
         parameters.add(priority);
@@ -37,22 +41,21 @@ public class OS {
         callType = currentCall.createProcess;
         kernel.start();
         waitForKernel();
-        return (int) returnValue;
+        System.out.println("Created: "+up.getClass().getSimpleName()+" "+returnValue.toString());
     }
 
     public static void SwitchProcess() {
         parameters.clear();
         callType = currentCall.switchProcess;
+        System.out.println("Switched");
         kernel.start();
         waitForKernel();
     }
 
     public static void Startup(UserlandProcess up) {
         CreateProcess(up);
-        waitForKernel();
 
         CreateProcess(new IdleProcess());
-        waitForKernel();
     }
 
     public static void StartupPCB(UserlandProcess up, OS.priority priority, int time) {
@@ -65,6 +68,7 @@ public class OS {
         parameters.clear();
         parameters.add(ms);
         callType = currentCall.sleep;
+        System.out.println("Sleep");
         kernel.start();
         waitForKernel();
     }
@@ -77,5 +81,39 @@ public class OS {
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    public static void GetPid(){
+        parameters.clear();
+        callType = currentCall.getSenderPID;
+        System.out.println("Sender Pid");
+        kernel.start();
+        waitForKernel();
+    }
+
+    public static void GetPidByName(String name){
+        parameters.clear();
+        parameters.add(name);
+        callType = currentCall.getReceieverPID;
+        System.out.println("Receiver Pid");
+        kernel.start();
+        waitForKernel();
+    }
+
+    public static void SendMessage(KernelMessage km){
+        parameters.clear();
+        parameters.add(km);
+        callType = currentCall.sendMessage;
+        System.out.println("Send Message");
+        kernel.start();
+        waitForKernel();
+    }
+
+    public static void GetMessage(){
+        parameters.clear();
+        callType = currentCall.getMessage;
+        System.out.println("Retrieving Message");
+        kernel.start();
+        waitForKernel();
     }
 }

@@ -1,8 +1,5 @@
 import java.time.Clock;
-import java.util.LinkedList;
-import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
+import java.util.*;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -16,16 +13,19 @@ public class Scheduler {
     private UserlandProcess currentUserLandProcess;
     private PCB currentUserLandProcessPCB;
     private final ScheduledExecutorService executor;
+    private Map<Integer,PCB> waitingList;
 
     public Runnable executingStop() {
         Runnable task = this::stoppingPCB;
-        executor.scheduleAtFixedRate(task, 1, 1, TimeUnit.SECONDS);
+        executor.scheduleAtFixedRate(task, 2, 2, TimeUnit.SECONDS);
         return task;
     }
 
-    public void stoppingPCB(){
-        if(currentUserLandProcessPCB!=null){
+    public void stoppingPCB() {
+        if (currentUserLandProcessPCB != null) {
             currentUserLandProcessPCB.stop();
+        }else{
+
         }
     }
 
@@ -35,6 +35,7 @@ public class Scheduler {
         this.interActiveLinkedList = new LinkedList<>();
         this.backgroundLinkedList = new LinkedList<>();
         this.userlandProcessLinkedList = new LinkedList<>();
+        this.waitingList = new HashMap<>();
 
         executor = Executors.newSingleThreadScheduledExecutor();
         executingStop();
@@ -75,9 +76,9 @@ public class Scheduler {
             case background -> backgroundLinkedList.add(pcb);
         }
 
-        if (currentUserLandProcessPCB == null) {
-            Sleep(waitTime);
-        }
+//        if (currentUserLandProcessPCB == null) {
+//            Sleep(waitTime);
+//        }
         return up.hashCode();
     }
 
@@ -95,7 +96,7 @@ public class Scheduler {
 
     public void Sleep(int ms) {
 
-        if(currentUserLandProcessPCB!=null){
+        if (currentUserLandProcessPCB != null) {
             realTimeLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
             interActiveLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
             backgroundLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
@@ -108,7 +109,6 @@ public class Scheduler {
                 case background -> backgroundLinkedList.add(currentUserLandProcessPCB);
             }
         }
-
 
 
         boolean found = false;
@@ -152,5 +152,99 @@ public class Scheduler {
         }
 
         currentUserLandProcessPCB.run();
+    }
+
+    public int GetPid() {
+        return currentUserLandProcessPCB.getPID();
+    }
+
+    public int GetPidByName(String name) {
+        int pid = -1;
+        boolean found = false;
+
+        for (PCB receiver : realTimeLinkedList) {
+            if (receiver.getUserlandProcess().getClass().getSimpleName().contains(name)) {
+                found = true;
+                pid = receiver.getPID();
+                break;
+            }
+        }
+        for (PCB receiver : interActiveLinkedList) {
+            if (receiver.getUserlandProcess().getClass().getSimpleName().contains(name) && !found) {
+                found = true;
+                pid = receiver.getPID();
+                break;
+            }
+        }
+        for (PCB receiver : backgroundLinkedList) {
+            if (receiver.getUserlandProcess().getClass().getSimpleName().contains(name) && !found) {
+                pid = receiver.getPID();
+                break;
+            }
+        }
+        return pid;
+    }
+
+    public void SendMessage(KernelMessage message) {
+        boolean found = false;
+
+        for(Map.Entry<Integer, PCB> receiver: waitingList.entrySet()){
+            if(receiver.getValue().getPID() == message.getReceiverPID()){
+                receiver.getValue().clearMessage();
+                receiver.getValue().AddMessage(message);
+                switch (receiver.getValue().getPriority()){
+                    case realTime -> realTimeLinkedList.add(receiver.getValue());
+                    case interActive -> interActiveLinkedList.add(receiver.getValue());
+                    case background -> backgroundLinkedList.add(receiver.getValue());
+                }
+                waitingList.remove(receiver.getKey());
+                found=true;
+                break;
+            }
+        }
+
+        for (PCB receiver : realTimeLinkedList) {
+            if (receiver.getPID()==message.getReceiverPID() && !found) {
+                found = true;
+                receiver.clearMessage();
+                receiver.AddMessage(message);
+                waitingList.put(receiver.getPID(), receiver);
+                break;
+            }
+        }
+        for (PCB receiver : interActiveLinkedList) {
+            if (receiver.getPID()==message.getReceiverPID() && !found) {
+                found = true;
+                receiver.clearMessage();
+                receiver.AddMessage(message);
+                waitingList.put(receiver.getPID(), receiver);
+                break;
+            }
+        }
+        for (PCB receiver : backgroundLinkedList) {
+            if (receiver.getPID()==message.getReceiverPID() && !found) {
+                receiver.clearMessage();
+                receiver.AddMessage(message);
+                waitingList.put(receiver.getPID(), receiver);
+                break;
+            }
+        }
+
+        WaitForMessage();
+
+
+    }
+
+    public void WaitForMessage(){
+        waitingList.put(currentUserLandProcessPCB.getPID(),currentUserLandProcessPCB);
+
+        realTimeLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
+        interActiveLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
+        backgroundLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
+//        return currentUserLandProcessPCB.getMessages().getFirst();
+    }
+
+    public LinkedList<KernelMessage> GetMessage() {
+        return currentUserLandProcessPCB.getMessages();
     }
 }
