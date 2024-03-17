@@ -13,18 +13,19 @@ public class Scheduler {
     private UserlandProcess currentUserLandProcess;
     private PCB currentUserLandProcessPCB;
     private final ScheduledExecutorService executor;
-    private Map<Integer,PCB> waitingList;
+    private Map<Integer, PCB> waitingList;
 
+    //runs the method to switch user land process
     public Runnable executingStop() {
         Runnable task = this::stoppingPCB;
-        executor.scheduleAtFixedRate(task, 2, 2, TimeUnit.SECONDS);
+        executor.scheduleAtFixedRate(task, 1, 1, TimeUnit.SECONDS);
         return task;
     }
 
     public void stoppingPCB() {
         if (currentUserLandProcessPCB != null) {
             currentUserLandProcessPCB.stop();
-        }else{
+        } else {
 
         }
     }
@@ -75,10 +76,6 @@ public class Scheduler {
             case interActive -> interActiveLinkedList.add(pcb);
             case background -> backgroundLinkedList.add(pcb);
         }
-
-//        if (currentUserLandProcessPCB == null) {
-//            Sleep(waitTime);
-//        }
         return up.hashCode();
     }
 
@@ -152,16 +149,25 @@ public class Scheduler {
         }
 
         currentUserLandProcessPCB.run();
+
+        realTimeLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
+        interActiveLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
+        backgroundLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
     }
 
+    //gets the current PID
     public int GetPid() {
         return currentUserLandProcessPCB.getPID();
     }
 
+    //gets the PID of the process with the name
     public int GetPidByName(String name) {
+        //returns -1 not found
         int pid = -1;
+        //when found, turns true to skip searching all other list
         boolean found = false;
 
+        //search the name in realTime list
         for (PCB receiver : realTimeLinkedList) {
             if (receiver.getUserlandProcess().getClass().getSimpleName().contains(name)) {
                 found = true;
@@ -169,6 +175,7 @@ public class Scheduler {
                 break;
             }
         }
+        //search the name in interactive list
         for (PCB receiver : interActiveLinkedList) {
             if (receiver.getUserlandProcess().getClass().getSimpleName().contains(name) && !found) {
                 found = true;
@@ -176,6 +183,7 @@ public class Scheduler {
                 break;
             }
         }
+        //search the name in background list
         for (PCB receiver : backgroundLinkedList) {
             if (receiver.getUserlandProcess().getClass().getSimpleName().contains(name) && !found) {
                 pid = receiver.getPID();
@@ -185,26 +193,32 @@ public class Scheduler {
         return pid;
     }
 
+    //sends message to specific process, the message have the destination PID
     public void SendMessage(KernelMessage message) {
+        //when found, turns true to skip searching all other list
         boolean found = false;
 
-        for(Map.Entry<Integer, PCB> receiver: waitingList.entrySet()){
-            if(receiver.getValue().getPID() == message.getReceiverPID()){
+        //search the process in the map for processes that have send and is now waiting for messages
+        for (Map.Entry<Integer, PCB> receiver : waitingList.entrySet()) {
+            //if found then the message is added to PCB and is sent back to the regular priority lists
+            if (receiver.getValue().getPID() == message.getReceiverPID()) {
                 receiver.getValue().clearMessage();
                 receiver.getValue().AddMessage(message);
-                switch (receiver.getValue().getPriority()){
+                switch (receiver.getValue().getPriority()) {
                     case realTime -> realTimeLinkedList.add(receiver.getValue());
                     case interActive -> interActiveLinkedList.add(receiver.getValue());
                     case background -> backgroundLinkedList.add(receiver.getValue());
                 }
+                //remove the process from the map as it is no longer waiting for a message
                 waitingList.remove(receiver.getKey());
-                found=true;
+                found = true;
                 break;
             }
         }
 
+        //searching for process in realTime list
         for (PCB receiver : realTimeLinkedList) {
-            if (receiver.getPID()==message.getReceiverPID() && !found) {
+            if (receiver.getPID() == message.getReceiverPID() && !found) {
                 found = true;
                 receiver.clearMessage();
                 receiver.AddMessage(message);
@@ -212,8 +226,9 @@ public class Scheduler {
                 break;
             }
         }
+        //searching for process in interActive list
         for (PCB receiver : interActiveLinkedList) {
-            if (receiver.getPID()==message.getReceiverPID() && !found) {
+            if (receiver.getPID() == message.getReceiverPID() && !found) {
                 found = true;
                 receiver.clearMessage();
                 receiver.AddMessage(message);
@@ -221,8 +236,9 @@ public class Scheduler {
                 break;
             }
         }
+        //searching for process in background list
         for (PCB receiver : backgroundLinkedList) {
-            if (receiver.getPID()==message.getReceiverPID() && !found) {
+            if (receiver.getPID() == message.getReceiverPID() && !found) {
                 receiver.clearMessage();
                 receiver.AddMessage(message);
                 waitingList.put(receiver.getPID(), receiver);
@@ -230,21 +246,69 @@ public class Scheduler {
             }
         }
 
+        //send the current process which sent a message and is now waiting for response into the Map for processes
+        //waiting for message
         WaitForMessage();
-
-
     }
 
-    public void WaitForMessage(){
-        waitingList.put(currentUserLandProcessPCB.getPID(),currentUserLandProcessPCB);
+    //send the current process which have sent a message and is now waiting for a message to the MAP for
+    //processes that are waiting for messages
+    public KernelMessage WaitForMessage() {
+        //puts the current process into the Map and remove the process currently existing in priority list
+        if (currentUserLandProcessPCB != null && currentUserLandProcessPCB.getMessages() != null && !currentUserLandProcessPCB.getMessages().isEmpty()) {
+            waitingList.put(currentUserLandProcessPCB.getPID(), currentUserLandProcessPCB);
 
-        realTimeLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
-        interActiveLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
-        backgroundLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
-//        return currentUserLandProcessPCB.getMessages().getFirst();
+            realTimeLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
+            interActiveLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
+            backgroundLinkedList.removeIf(process -> currentUserLandProcessPCB.getUserlandProcess() == process.getUserlandProcess());
+
+            return currentUserLandProcessPCB.getMessages().getFirst();
+        } else {
+            return null;
+        }
     }
 
+    //gets the message from PCB to user land process
     public LinkedList<KernelMessage> GetMessage() {
         return currentUserLandProcessPCB.getMessages();
+    }
+
+    //tells the user land process that the OS is done processing and is okay to run
+    public void startUserLand() {
+        currentUserLandProcessPCB.getUserlandProcess().start();
+    }
+
+
+    //exist for easier testing
+    public PCB getPCBByName(String name) {
+        //returns -1 not found
+        PCB pcb = null;
+        //when found, turns true to skip searching all other list
+        boolean found = false;
+
+        //search the name in realTime list
+        for (PCB receiver : realTimeLinkedList) {
+            if (receiver.getUserlandProcess().getClass().getSimpleName().contains(name)) {
+                found = true;
+                pcb = receiver;
+                break;
+            }
+        }
+        //search the name in interactive list
+        for (PCB receiver : interActiveLinkedList) {
+            if (receiver.getUserlandProcess().getClass().getSimpleName().contains(name) && !found) {
+                found = true;
+                pcb = receiver;
+                break;
+            }
+        }
+        //search the name in background list
+        for (PCB receiver : backgroundLinkedList) {
+            if (receiver.getUserlandProcess().getClass().getSimpleName().contains(name) && !found) {
+                pcb = receiver;
+                break;
+            }
+        }
+        return pcb;
     }
 }

@@ -4,7 +4,7 @@ public class HelloWorld extends UserlandProcess{
         while(true){
             System.out.println("Hello world");
             try {
-                Thread.sleep(50);
+                Thread.sleep(200);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

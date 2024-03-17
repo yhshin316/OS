@@ -26,6 +26,7 @@ public class Kernel implements Runnable{
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }
+            //switch to tell kernel to do specific action based on the callType of OS.
             switch (OS.callType){
                 case createProcess:
                     OS.returnValue = scheduler.CreateProcess((UserlandProcess) OS.parameters.getFirst(), (OS.priority) OS.parameters.get(1), (Integer) OS.parameters.get(2));
@@ -36,39 +37,36 @@ public class Kernel implements Runnable{
                 case sleep:
                     scheduler.Sleep((int)OS.parameters.getFirst());
                     break;
+                    //get the pid of the current user land process
                 case getSenderPID:
                     OS.returnValue = scheduler.GetPid();
                     break;
+                    //get the PID for the user land process that has a specific name
                 case getReceieverPID:
                     OS.returnValue = scheduler.GetPidByName((String) OS.parameters.getFirst());
                     break;
+                    //send the message to the PCB that has the user land process name
                 case sendMessage:
                     scheduler.SendMessage((KernelMessage) OS.parameters.getFirst());
                     break;
+                    //get the message in the PCB of the userlandprocess
                 case getMessage:
                     OS.returnValue = scheduler.GetMessage();
                     break;
+                    //starts the user land process
+                case startUserland:
+                    scheduler.startUserLand();
             }
 
+            //tells OS that kernel finished and is okay to continue
             synchronized (this) {
                 notify();
             }
         }
     }
 
-//    public void GetPid() {
-//        OS.returnValue = scheduler.GetPid();
-//    }
-//
-//    public void GetPidByName(){
-//        OS.returnValue = scheduler.GetPidByName((String) OS.parameters.getFirst());
-//    }
-//
-//    public void SendMessage(){
-//        scheduler.SendMessage((KernelMessage) OS.parameters.getFirst());
-//    }
-//
-//    public void GetMessage(){
-//        OS.returnValue = scheduler.GetMessage();
-//    }
+    //exist for testing purposes
+    public Scheduler getScheduler() {
+        return scheduler;
+    }
 }

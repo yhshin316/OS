@@ -4,7 +4,7 @@ public class GoodByeWorld extends UserlandProcess{
         while(true){
             System.out.println("GoodBye world");
             try {
-                Thread.sleep(50);
+                Thread.sleep(200);
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
             }

@@ -15,7 +15,8 @@ public class OS {
         getSenderPID,
         getReceieverPID,
         sendMessage,
-        getMessage
+        getMessage,
+        startUserland
     }
 
     public enum priority {
@@ -30,7 +31,6 @@ public class OS {
         callType = currentCall.createProcess;
         kernel.start();
         waitForKernel();
-        System.out.println("Created"+returnValue.toString());
     }
 
     public static void CreateProcessPCB(UserlandProcess up, OS.priority priority, int time) {
@@ -41,13 +41,11 @@ public class OS {
         callType = currentCall.createProcess;
         kernel.start();
         waitForKernel();
-        System.out.println("Created: "+up.getClass().getSimpleName()+" "+returnValue.toString());
     }
 
     public static void SwitchProcess() {
         parameters.clear();
         callType = currentCall.switchProcess;
-        System.out.println("Switched");
         kernel.start();
         waitForKernel();
     }
@@ -56,23 +54,27 @@ public class OS {
         CreateProcess(up);
 
         CreateProcess(new IdleProcess());
+
+        Sleep(0);
     }
 
     public static void StartupPCB(UserlandProcess up, OS.priority priority, int time) {
         CreateProcessPCB(up, priority, time);
 
         CreateProcessPCB(new IdleProcess(), OS.priority.background, time);
+
+        Sleep(0);
     }
 
     public static void Sleep(int ms) {
         parameters.clear();
         parameters.add(ms);
         callType = currentCall.sleep;
-        System.out.println("Sleep");
         kernel.start();
         waitForKernel();
     }
 
+    //waiting for the Kernel to finish to prevent other OS functions to override the parameters
     public static void waitForKernel() {
         try {
             synchronized (kernel) {
@@ -83,37 +85,53 @@ public class OS {
         }
     }
 
+    //get the pid of the current process
     public static void GetPid(){
         parameters.clear();
         callType = currentCall.getSenderPID;
-        System.out.println("Sender Pid");
         kernel.start();
         waitForKernel();
+        startUserLand();
     }
 
+    //get the pid of the process by name
     public static void GetPidByName(String name){
         parameters.clear();
         parameters.add(name);
         callType = currentCall.getReceieverPID;
-        System.out.println("Receiver Pid");
         kernel.start();
         waitForKernel();
+        startUserLand();
     }
 
+    //send the message
     public static void SendMessage(KernelMessage km){
         parameters.clear();
-        parameters.add(km);
+        parameters.add(new KernelMessage(km));
         callType = currentCall.sendMessage;
-        System.out.println("Send Message");
         kernel.start();
         waitForKernel();
+        startUserLand();
     }
 
+    //get the received message
     public static void GetMessage(){
         parameters.clear();
         callType = currentCall.getMessage;
-        System.out.println("Retrieving Message");
         kernel.start();
         waitForKernel();
+        startUserLand();
+    }
+
+    //telling the user land process that the OS has finished processing and is okay to continue on
+    public static void startUserLand(){
+        callType = currentCall.startUserland;
+        kernel.start();
+        waitForKernel();
+    }
+
+    //exist for testing purposes
+    public static Kernel getKernel() {
+        return kernel;
     }
 }

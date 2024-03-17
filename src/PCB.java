@@ -9,6 +9,7 @@ public class PCB {
     private Instant wakeUp;
     private OS.priority priority;
     private int demotion;
+    //list of messages
     private LinkedList<KernelMessage> messages;
 
     public PCB(UserlandProcess up,OS.priority priority, int waitTime){
@@ -55,11 +56,11 @@ public class PCB {
         }
     }
 
+    //add the received messages
     public void AddMessage(KernelMessage message){
-        System.out.println(this.userlandProcess.getClass().getSimpleName()+": Got the message: "+message);
         messages.add(message);
     }
-
+    //clears up the old messages for the new incoming ones
     public void clearMessage(){
         messages.clear();
     }
